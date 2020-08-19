@@ -10,7 +10,7 @@ import sobol_seq
 
 from gpflow.ci_utils import ci_niter
 
-class MixedBayesOpt():
+class MVO():
     '''
     Class for mixed varibale bayesian optimisation
     '''
@@ -221,12 +221,12 @@ class MixedBayesOpt():
     def objective_closure(self):
         return -self.model.log_marginal_likelihood()
 
-    def fitmodel(self, X, y):
+    def fitmodel(self, X, y, variance=1.0):
         '''
         Fit the mixed variable model
         '''
         #k = MixedMatern52(input_dim=self.input_dim, ARD=self.ARD,num_qual=self.num_qual) + gpf.kernels.Constant(1)
-        k = MixedMatern32(lengthscales=np.ones((1,self.input_dim)).reshape(-1),num_qual=self.num_qual) + gpf.kernels.Constant()
+        k = MixedMatern32(variance = variance, lengthscales=np.ones((1,self.input_dim)).reshape(-1),num_qual=self.num_qual) + gpf.kernels.Constant()
         #k = MixedSqExp(input_dim=self.input_dim, ARD=self.ARD,num_qual=self.num_qual) + gpf.kernels.Constant(1)
         self.model = gpf.models.GPR(data=(X, y), kernel=k)
         #opt = gpf.training.AdamOptimizer(0.01)
@@ -237,12 +237,20 @@ class MixedBayesOpt():
         try:
             #opt = gpf.train.ScipyOptimizer()
             #opt.minimize(self.model)
-            run_adam(self.model, ci_niter(3000))
+            #run_adam(self.model, ci_niter(3000))
+            optimizer = gpf.optimizers.Scipy()
+            logs = optimizer.minimize(
+                self.model.training_loss,
+                variables=self.model.trainable_variables,compile=False,
+                options=dict(disp=False, maxiter=200),step_callback=None)
         except Exception as e:
             print("Warning: Unable to perform optimisation of model\n")
             print(e)
             optimizer = gpf.optimizers.Scipy()
-            optimizer.minimize(self.model.training_loss, variables=self.model.trainable_variables)
+            logs = optimizer.minimize(
+                self.model.training_loss,
+                variables=self.model.trainable_variables,compile=False,
+                options=dict(disp=False, maxiter=200),step_callback=None)
             #opt = gpf.training.AdamOptimizer(0.01)
             #opt.minimize(self.model)
         
@@ -352,5 +360,3 @@ def run_adam(model, iterations):
     for step in range(iterations):
         elbo = optimization_step(adam, model)
     return
-
-

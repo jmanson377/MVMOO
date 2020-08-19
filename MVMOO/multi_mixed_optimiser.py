@@ -3,13 +3,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from scipy.stats import norm
-from mixed_optimiser import MixedBayesOpt
+from mixed_optimiser import MVO
 import numpy.matlib as matlib
 from scipy.optimize import shgo, differential_evolution, dual_annealing
 import scipy as stats
 import sobol_seq
+import time
 
-class MultiMixedBayesOpt(MixedBayesOpt):
+class MVMOO(MVO):
     """
     Multi variate mixed variable optimisation
     """
@@ -22,7 +23,7 @@ class MultiMixedBayesOpt(MixedBayesOpt):
         self.num_obj = num_obj
 
 
-    def generatemodels(self, X, Y, scale=True):
+    def generatemodels(self, X, Y, scale=True, variance=1.0):
         """
         Generate a list containing the models for each of the objectives
         """
@@ -32,7 +33,7 @@ class MultiMixedBayesOpt(MixedBayesOpt):
             self.Yscaled = self.scaley(Y)
             self.Xscaled = self.scaleX(X)
             for i in range(nobj):
-                self.fitmodel(X, self.Yscaled[:,i].reshape((-1,1)))
+                self.fitmodel(X, self.Yscaled[:,i].reshape((-1,1)), variance=variance)
                 models.append(self.model)
             return models
         for i in range(nobj):
@@ -156,7 +157,7 @@ class MultiMixedBayesOpt(MixedBayesOpt):
         varlist = []
     
         for iobj in range(nobj):
-            u, var = self.models[iobj].predict_y(X)
+            u, var = self.models[iobj].predict_f(X)
             ulist.append(u)
             varlist.append(var)
             
@@ -322,8 +323,9 @@ class MultiMixedBayesOpt(MixedBayesOpt):
                 return fmax, xmax
             return fmax, xmax, fvals, Xsamples
         elif algorithm == 'Random Local':
+            start = time.time()
             #Xsamples = self.sobol_design(samples=10000)
-            Xsamples = self.halton_design(samples=10000)
+            Xsamples = self.halton_design(samples=100000)
         #Xscaledsample = self.scaleX(Xsamples,store=False)
             if constraints is False:
                 fvals = self.EIM_Euclidean(Xsamples)
@@ -333,7 +335,13 @@ class MultiMixedBayesOpt(MixedBayesOpt):
             fmax = np.amax(fvals)
             indymax = np.where(fvals == fmax)
             xmax = Xsamples[int(indymax[0][0]),:]
-
+            end = time.time()
+            print(xmax)
+            print(fmax)
+            print("Time elapsed sampling: " + str(end - start) + " seconds.")
+            test = True
+            if test == True:
+                return fmax, xmax
             qual = xmax[-self.num_qual:]
 
             bnd = list(self.bounds[:,:self.num_quant].T)
@@ -342,9 +350,12 @@ class MultiMixedBayesOpt(MixedBayesOpt):
             for element in bnd:
                 bndlist.append(tuple(element))
 
-            
-            result = stats.optimize.minimize(self.EIMoptimiserWrapper, xmax[:-self.num_qual].reshape(-1), args=(qual,constraints), bounds=bndlist,method='TNC')
-            
+            start = time.time()
+            result = stats.optimize.minimize(self.EIMoptimiserWrapper, xmax[:-self.num_qual].reshape(-1), args=(qual,constraints), bounds=bndlist,method='L-BFGS-B')
+            end = time.time()
+            print(result.x)
+            print(result.fun)
+            print("Time elapsed optimise: " + str(end - start) + " seconds.")
             if values is None:
                 
                 return result.fun, np.concatenate((result.x, qual),axis=None)
@@ -530,6 +541,14 @@ class MultiMixedBayesOpt(MixedBayesOpt):
         if constraints is False:
             self.models = self.generatemodels(X, Y)
             self.paretofront(self.Yscaled)
+
+            means = []
+            for model in self.models:
+                mean, _ = model.predict_y(self.halton_design(samples=2))
+                means.append(mean.numpy())
+            if np.any(means == np.nan):
+                print("Retraining model with new starting variance")
+                self.models = self.generatemodels(X, Y, variance=0.1)
 
             fmax, xmax = self.EIMmixedoptimiser(constraints, algorithm='Random Local')
             #fmax, xmax = self.AEIMmixedoptimiser(algorithm='Random')

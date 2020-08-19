@@ -92,8 +92,8 @@ class MixedMatern52(gpf.kernels.Kernel):
                 quallengthscales = self.lengthscales[-self.num_qual:]   # get qualitative variable length scales            
                 for i in range(self.num_qual):
                     compqual = tf.not_equal(tf.reshape(Xqual[:,i],(-1,1)),tf.transpose(tf.reshape(Xqual[:,i],(-1,1))))
-                    distqual += tf.divide(tf.cast(tf.where(compqual,tf.ones(tf.shape(compqual)),\
-                                         tf.zeros(tf.shape(compqual))),dtype=tf.float64), quallengthscales[i])
+                    distqual += tf.divide(tf.dtypes.cast(tf.where(compqual,tf.ones(tf.shape(compqual)),\
+                                         tf.zeros(tf.shape(compqual))),tf.float64), quallengthscales[i])
                     
                 dist = distquant + distqual
                 return dist #/ self.input_dim
@@ -111,8 +111,8 @@ class MixedMatern52(gpf.kernels.Kernel):
             
             for i in range(self.num_qual):
                 compqual =  tf.not_equal(tf.reshape(Xqual[:,i],(-1,1)),tf.transpose(tf.reshape(X2qual[:,i],(-1,1))))
-                distqual += tf.divide(tf.cast(tf.where(compqual,tf.ones(tf.shape(compqual)),\
-                                         tf.zeros(tf.shape(compqual))),dtype=tf.float64), quallengthscales[i])
+                distqual += tf.divide(tf.dtypes.cast(tf.where(compqual,tf.ones(tf.shape(compqual)),\
+                                         tf.zeros(tf.shape(compqual))),tf.float64), quallengthscales[i])
                 
             dist = distquant + distqual
 
@@ -142,7 +142,7 @@ class MixedMatern32(gpf.kernels.Kernel):
         author={Halstrup, Momchil},
         year={2016}}
     """
-    def __init__(self, input_dim=1, variance=1.0, lengthscales=1.0, 
+    def __init__(self, input_dim=1, variance=1.0, lengthscales=np.array(1.0), 
                 num_qual=0, **kwargs): 
         """
         :param variance: the (initial) value for the variance parameter
@@ -206,8 +206,8 @@ class MixedMatern32(gpf.kernels.Kernel):
                 quallengthscales = self.lengthscales[-self.num_qual:]   # get qualitative variable length scales            
                 for i in range(self.num_qual):
                     compqual = tf.not_equal(tf.reshape(Xqual[:,i],(-1,1)),tf.transpose(tf.reshape(Xqual[:,i],(-1,1))))
-                    distqual += tf.divide(tf.cast(tf.where(compqual,tf.ones(tf.shape(compqual)),\
-                                         tf.zeros(tf.shape(compqual))),dtype=tf.float64), quallengthscales[i])
+                    distqual += tf.divide(tf.dtypes.cast(tf.where(compqual,tf.ones(tf.shape(compqual)),\
+                                         tf.zeros(tf.shape(compqual))),tf.float64), quallengthscales[i])
                     
                 dist = distquant + distqual
                 return dist #/ self.input_dim
@@ -225,8 +225,8 @@ class MixedMatern32(gpf.kernels.Kernel):
             
             for i in range(self.num_qual):
                 compqual =  tf.not_equal(tf.reshape(Xqual[:,i],(-1,1)),tf.transpose(tf.reshape(X2qual[:,i],(-1,1))))
-                distqual += tf.divide(tf.cast(tf.where(compqual,tf.ones(tf.shape(compqual)),\
-                                         tf.zeros(tf.shape(compqual))),dtype=tf.float64), quallengthscales[i])
+                distqual += tf.divide(tf.dtypes.cast(tf.where(compqual,tf.ones(tf.shape(compqual)),\
+                                         tf.zeros(tf.shape(compqual))),tf.float64), quallengthscales[i])
                 
             dist = distquant + distqual
 
@@ -320,8 +320,8 @@ class MixedSqExp(gpf.kernels.Kernel):
                 quallengthscales = self.lengthscales[-self.num_qual:]   # get qualitative variable length scales            
                 for i in range(self.num_qual):
                     compqual = tf.not_equal(tf.reshape(Xqual[:,i],(-1,1)),tf.transpose(tf.reshape(Xqual[:,i],(-1,1))))
-                    distqual += tf.divide(tf.cast(tf.where(compqual,tf.ones(tf.shape(compqual)),\
-                                         tf.zeros(tf.shape(compqual))),dtype=tf.float64), quallengthscales[i])
+                    distqual += tf.divide(tf.dtypes.cast(tf.where(compqual,tf.ones(tf.shape(compqual)),\
+                                         tf.zeros(tf.shape(compqual))),tf.float64), quallengthscales[i])
                     
                 dist = distquant + distqual
                 return dist #/ self.input_dim
@@ -339,8 +339,8 @@ class MixedSqExp(gpf.kernels.Kernel):
             
             for i in range(self.num_qual):
                 compqual =  tf.not_equal(tf.reshape(Xqual[:,i],(-1,1)),tf.transpose(tf.reshape(X2qual[:,i],(-1,1))))
-                distqual += tf.divide(tf.cast(tf.where(compqual,tf.ones(tf.shape(compqual)),\
-                                         tf.zeros(tf.shape(compqual))),dtype=tf.float64), quallengthscales[i])
+                distqual += tf.divide(tf.dtypes.cast(tf.where(compqual,tf.ones(tf.shape(compqual)),\
+                                         tf.zeros(tf.shape(compqual))),tf.float64), quallengthscales[i])
                 
             dist = distquant + distqual
 
@@ -370,67 +370,3 @@ def _broadcasting_elementwise_op(op, a, b):
     return tf.reshape(flatres, tf.concat([tf.shape(a), tf.shape(b)], 0))
 
 ###############################################################################
-    
-def ftrig(s):
-    x = s[:,0]
-    d = s[:,1]
-    f = np.zeros((np.shape(s)[0],1))
-    for i in range(np.shape(s)[0]):
-        if d[i] == 1:
-            f[i] = np.sin(6*(x[i]**2 - 0.25)) + 1.
-        else:
-            f[i] = np.sin(x[i])*np.tan(x[i]) + 0.1
-    return f
-
-###############################################################################
-
-from gpflow.utilities import print_summary
-import time
-
-X = np.random.random((20,1))
-Xqual = np.random.randint(1,3,(20,1))
-Xcomb = np.concatenate((X,Xqual),1)
-
-Y = ftrig(Xcomb)
-
-k1 = MixedMatern32(input_dim=2,num_qual=1, lengthscales=[1,1])
-#k2 = gpf.kernels.Constant(1)
-
-k = k1 #+ k2
-
-print_summary(k)
-
-start = time.time()
-mixedmodel = gpf.models.GPR(data=(Xcomb, Y), kernel=k)
-opt = gpf.optimizers.Scipy()
-logs = opt.minimize(
-    mixedmodel.training_loss,
-    variables=mixedmodel.trainable_variables,compile=False,
-    options=dict(disp=False, maxiter=200),step_callback=None,
-)
-end = time.time()
-print(end-start)
-
-xx = np.concatenate((np.linspace(0, 1.1, 100).reshape(100, 1),1*np.ones((100,1))),1)
-mean, var = mixedmodel.predict_y(xx)
-line, = plt.plot(xx[:,0], mean, lw=2)
-_ = plt.fill_between(xx[:,0], mean[:,0] - 2*np.sqrt(var[:,0]), mean[:,0] + 2*np.sqrt(var[:,0]), color=line.get_color(), alpha=0.2)
-plt.plot(xx[:,0],ftrig(xx))
-plt.scatter(Xcomb[(Xqual==1).reshape(-1),0],Y[(Xqual==1).reshape(-1)])
-plt.show()
-
-xx = np.concatenate((np.linspace(0, 1.1, 100).reshape(100, 1),2*np.ones((100,1))),1)
-mean, var = mixedmodel.predict_y(xx)
-line, = plt.plot(xx[:,0], mean, lw=2)
-_ = plt.fill_between(xx[:,0], mean[:,0] - 2*np.sqrt(var[:,0]), mean[:,0] + 2*np.sqrt(var[:,0]), color=line.get_color(), alpha=0.2)
-plt.plot(xx[:,0],ftrig(xx))
-plt.scatter(Xcomb[(Xqual==2).reshape(-1),0],Y[(Xqual==2).reshape(-1)])
-plt.show()
-
-
-
-
-
-print_summary(mixedmodel)
-#xx = np.concatenate((np.linspace(0, 1.1, 10000).reshape(10000, 1),2*np.ones((10000,1))),1)
-#mean, var = mixedmodel.predict_y(xx)
