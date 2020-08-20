@@ -325,7 +325,7 @@ class MVMOO(MVO):
         elif algorithm == 'Random Local':
             start = time.time()
             #Xsamples = self.sobol_design(samples=10000)
-            Xsamples = self.halton_design(samples=100000)
+            Xsamples = self.halton_design(samples=10000)
         #Xscaledsample = self.scaleX(Xsamples,store=False)
             if constraints is False:
                 fvals = self.EIM_Euclidean(Xsamples)
@@ -339,7 +339,7 @@ class MVMOO(MVO):
             print(xmax)
             print(fmax)
             print("Time elapsed sampling: " + str(end - start) + " seconds.")
-            test = True
+            test = False
             if test == True:
                 return fmax, xmax
             qual = xmax[-self.num_qual:]
@@ -351,7 +351,7 @@ class MVMOO(MVO):
                 bndlist.append(tuple(element))
 
             start = time.time()
-            result = stats.optimize.minimize(self.EIMoptimiserWrapper, xmax[:-self.num_qual].reshape(-1), args=(qual,constraints), bounds=bndlist,method='L-BFGS-B')
+            result = stats.optimize.minimize(self.EIMoptimiserWrapper, xmax[:-self.num_qual].reshape(-1), args=(qual,constraints), bounds=bndlist,method='SLSQP')
             end = time.time()
             print(result.x)
             print(result.fun)
