@@ -119,7 +119,7 @@ Ystore = []
 for k in range(1):
     X = optimiser.initial_design(samples=5)
     Y = discretevlmop2(X)
-    for i in range(30):
+    for i in range(1):
         start = time.time()
         xmax, _ = optimiser.multinextcondition(X,Y)
         end = time.time()
@@ -139,5 +139,5 @@ for k in range(1):
     Ystore.append(Y)
 plt.scatter(Ysorted[:,0],Ysorted[:,1],label='Pareto Front',s=2)
 plt.scatter(Y[:10,0],Ysorted[:10,1],label='Initial',s=10)
-plt.scatter(Y[10:,0],Y[10:,1],label='Algorithm',s=10)
+plt.scatter(Y[10:,0],Y[10:,1],label='Algorithm',s=30)
 plt.show()
