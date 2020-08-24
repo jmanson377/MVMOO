@@ -1,6 +1,6 @@
 # Mixed Variable Multi-Objective Optimisation (MVMOO)
 ## Details
-MVMOO utilises [GPflow 2.0+](https://gpflow.org) to perform multi-objective optimisation for mixed variable systems. The algorithm utilises the gower distance metric to allow Bayesian multi-objective optimisation methods to be used on mixed variable systems.
+MVMOO utilises [GPflow 2.0+](https://gpflow.org) to perform multi-objective optimisation for mixed variable systems. The algorithm utilises the gower distance metric to enable Bayesian multi-objective optimisation methods to be used on mixed variable systems.
 
 ## Installation
 To install it is recommended you follow the installation instructions for GPflow 2.0+ and [Tensorflow 2.1+](https://www.tensorflow.org/install), once Tensorflow and GPflow have been successfully installed it is then recommended to install the remaining packages (see **requirements.txt**)
