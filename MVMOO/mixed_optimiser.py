@@ -30,111 +30,6 @@ class MVO():
         else:
             self.bounds = bounds
 
-    def initial_design(self,samples=5):
-        '''
-        Suggest a space filling design base on the number of variablesand their bounds
-        '''
-        if self.num_qual == 0:
-            X = np.multiply(lhs(self.num_quant, samples=samples, criterion='maximin'), \
-                    (self.bounds[1,:self.num_quant]-self.bounds[0,:self.num_quant])) + self.bounds[0,:self.num_quant]
-            return X
-        qlist = []
-        qualbounds = self.bounds[:,self.num_quant:]
-        for i in range(self.num_qual):
-            qlist.append(np.linspace(qualbounds[0,i],qualbounds[1,i],qualbounds[1,i]))
-        Xqual = np.array(np.meshgrid(*qlist)).T.reshape(-1,self.num_qual)
-
-        Xcombined = np.zeros((samples*np.shape(Xqual)[0],self.input_dim))
-        for i in range(int(np.shape(Xqual)[0])):
-            Xcombined[i*samples:(i+1)*samples,:self.num_quant] = \
-                np.multiply(lhs(self.num_quant, samples=samples, criterion='maximin'), \
-                    (self.bounds[1,:self.num_quant]-self.bounds[0,:self.num_quant])) + self.bounds[0,:self.num_quant]
-            Xcombined[i*samples:(i+1)*samples,self.num_quant:] = np.multiply(np.ones((samples,self.num_qual)),Xqual[i,:])
-
-        return Xcombined
-
-    def sobol_design(self,samples=5):
-        '''
-        Suggest a space filling design base on the number of variablesand their bounds
-        '''
-        if self.num_qual == 0:
-            X = np.multiply(sobol_seq.i4_sobol_generate(self.num_quant, samples), \
-                    (self.bounds[1,:self.num_quant]-self.bounds[0,:self.num_quant])) + self.bounds[0,:self.num_quant]
-            return X
-        qlist = []
-        qualbounds = self.bounds[:,self.num_quant:]
-        for i in range(self.num_qual):
-            qlist.append(np.linspace(qualbounds[0,i],qualbounds[1,i],qualbounds[1,i]))
-        Xqual = np.array(np.meshgrid(*qlist)).T.reshape(-1,self.num_qual)
-
-        Xcombined = np.zeros((samples*np.shape(Xqual)[0],self.input_dim))
-        for i in range(int(np.shape(Xqual)[0])):
-            Xcombined[i*samples:(i+1)*samples,:self.num_quant] = \
-                np.multiply(sobol_seq.i4_sobol_generate(self.num_quant, samples), \
-                    (self.bounds[1,:self.num_quant]-self.bounds[0,:self.num_quant])) + self.bounds[0,:self.num_quant]
-            Xcombined[i*samples:(i+1)*samples,self.num_quant:] = np.multiply(np.ones((samples,self.num_qual)),Xqual[i,:])
-
-        return Xcombined
-
-    def random_sample(self,samples=10000):
-        '''
-        Suggest a space filling design base on the number of variablesand their bounds
-        '''
-        if self.num_qual == 0:
-            X = np.multiply(np.random.random_sample((samples,self.num_quant)), \
-                    (self.bounds[1,:self.num_quant]-self.bounds[0,:self.num_quant])) + self.bounds[0,:self.num_quant]
-            return X
-        qlist = []
-        qualbounds = self.bounds[:,self.num_quant:]
-        for i in range(self.num_qual):
-            qlist.append(np.linspace(qualbounds[0,i],qualbounds[1,i],qualbounds[1,i]))
-        Xqual = np.array(np.meshgrid(*qlist)).T.reshape(-1,self.num_qual)
-
-        Xcombined = np.zeros((samples*np.shape(Xqual)[0],self.input_dim))
-        for i in range(int(np.shape(Xqual)[0])):
-            Xcombined[i*samples:(i+1)*samples,:self.num_quant] = \
-                np.multiply(np.random.random_sample((samples,self.num_quant)), \
-                    (self.bounds[1,:self.num_quant]-self.bounds[0,:self.num_quant])) + self.bounds[0,:self.num_quant]
-            Xcombined[i*samples:(i+1)*samples,self.num_quant:] = np.multiply(np.ones((samples,self.num_qual)),Xqual[i,:])
-
-        return Xcombined
-    
-    def primes_from_2_to(self, n):
-        """Prime number from 2 to n.
-        From `StackOverflow <https://stackoverflow.com/questions/2068372>`_.
-        :param int n: sup bound with ``n >= 6``.
-        :return: primes in 2 <= p < n.
-        :rtype: list
-        """
-        sieve = np.ones(n // 3 + (n % 6 == 2), dtype=np.bool)
-        for i in range(1, int(n ** 0.5) // 3 + 1):
-            if sieve[i]:
-                k = 3 * i + 1 | 1
-                sieve[k * k // 3::2 * k] = False
-                sieve[k * (k - 2 * (i & 1) + 4) // 3::2 * k] = False
-        return np.r_[2, 3, ((3 * np.nonzero(sieve)[0][1:] + 1) | 1)]
-
-
-    def van_der_corput(self, n_sample, base=2):
-        """Van der Corput sequence.
-        :param int n_sample: number of element of the sequence.
-        :param int base: base of the sequence.
-        :return: sequence of Van der Corput.
-        :rtype: list (n_samples,)
-        """
-        n_sample, base = int(n_sample), int(base)
-        sequence = []
-        for i in range(n_sample):
-            n_th_number, denom = 0., 1.
-            while i > 0:
-                i, remainder = divmod(i, base)
-                denom *= base
-                n_th_number += remainder / denom
-            sequence.append(n_th_number)
-
-        return sequence
-
-
     def halton(self, dim, n_sample):
         """Halton sequence.
         :param int dim: dimension
@@ -142,42 +37,88 @@ class MVO():
         :return: sequence of Halton.
         :rtype: array_like (n_samples, n_features)
         """
+
+        def primes_from_2_to(n):
+            """Prime number from 2 to n.
+            From `StackOverflow <https://stackoverflow.com/questions/2068372>`_.
+            :param int n: sup bound with ``n >= 6``.
+            :return: primes in 2 <= p < n.
+            :rtype: list
+            """
+            sieve = np.ones(n // 3 + (n % 6 == 2), dtype=np.bool)
+            for i in range(1, int(n ** 0.5) // 3 + 1):
+                if sieve[i]:
+                    k = 3 * i + 1 | 1
+                    sieve[k * k // 3::2 * k] = False
+                    sieve[k * (k - 2 * (i & 1) + 4) // 3::2 * k] = False
+            return np.r_[2, 3, ((3 * np.nonzero(sieve)[0][1:] + 1) | 1)]
+
+        def van_der_corput(n_sample, base=2):
+            """Van der Corput sequence.
+            :param int n_sample: number of element of the sequence.
+            :param int base: base of the sequence.
+            :return: sequence of Van der Corput.
+            :rtype: list (n_samples,)
+            """
+            n_sample, base = int(n_sample), int(base)
+            sequence = []
+            for i in range(n_sample):
+                n_th_number, denom = 0., 1.
+                while i > 0:
+                    i, remainder = divmod(i, base)
+                    denom *= base
+                    n_th_number += remainder / denom
+                sequence.append(n_th_number)
+
+            return sequence
+
         big_number = 10
         while 'Not enought primes':
-            base = self.primes_from_2_to(big_number)[:dim]
+            base = primes_from_2_to(big_number)[:dim]
             if len(base) == dim:
                 break
             big_number += 1000
 
         # Generate a sample using a Van der Corput sequence per dimension.
-        sample = [self.van_der_corput(n_sample + 1, dim) for dim in base]
+        sample = [van_der_corput(n_sample + 1, dim) for dim in base]
         sample = np.stack(sample, axis=-1)[1:]
 
         return sample
 
-    def halton_design(self,samples=5):
-        '''
-        Suggest a space filling design base on the number of variablesand their bounds
-        '''
+    def sample_design(self, samples=5, design='random'):
+        """
+        Suggest different samples based on a selected design
+        """
+        if design == 'random':
+            Xquant = np.random.random_sample((samples,self.num_quant))
+        elif design == 'halton':
+            Xquant = self.halton(self.num_quant, samples)
+        elif design == 'sobol':
+            Xquant = sobol_seq.i4_sobol_generate(self.num_quant, samples)
+        elif design == 'lhc':
+            Xquant = lhs(self.num_quant, samples=samples, criterion='maximin')
+        else:
+            raise ValueError("Please select a valid design: random, halton, sobol or lhc")
+
         if self.num_qual == 0:
-            X = np.multiply(self.halton(self.num_quant, samples), \
-                    (self.bounds[1,:self.num_quant]-self.bounds[0,:self.num_quant])) + self.bounds[0,:self.num_quant]
-            return X
+            return np.multiply(Xquant, (self.bounds[1,:self.num_quant]-self.bounds[0,:self.num_quant])) + self.bounds[0,:self.num_quant]
+
         qlist = []
         qualbounds = self.bounds[:,self.num_quant:]
+
         for i in range(self.num_qual):
             qlist.append(np.linspace(qualbounds[0,i],qualbounds[1,i],qualbounds[1,i]))
+
         Xqual = np.array(np.meshgrid(*qlist)).T.reshape(-1,self.num_qual)
 
         Xcombined = np.zeros((samples*np.shape(Xqual)[0],self.input_dim))
-        X = self.halton(self.num_quant, samples)
-
+        
         for i in range(int(np.shape(Xqual)[0])):
             Xcombined[i*samples:(i+1)*samples,:self.num_quant] = \
-                np.multiply(X, \
-                    (self.bounds[1,:self.num_quant]-self.bounds[0,:self.num_quant])) + self.bounds[0,:self.num_quant]
-            Xcombined[i*samples:(i+1)*samples,self.num_quant:] = np.multiply(np.ones((samples,self.num_qual)),Xqual[i,:])
+                np.multiply(Xquant, (self.bounds[1,:self.num_quant]-self.bounds[0,:self.num_quant])) + self.bounds[0,:self.num_quant]
 
+            Xcombined[i*samples:(i+1)*samples,self.num_quant:] = np.multiply(np.ones((samples,self.num_qual)),Xqual[i,:])
+            
         return Xcombined
     
     def scaleX(self, X, mode='meanstd', store=True):
@@ -218,30 +159,17 @@ class MVO():
         else:
             raise ValueError('No other scaling currently implemented')
 
-    def objective_closure(self):
-        return -self.model.log_marginal_likelihood()
-
     def fitmodel(self, X, y, variance=1.0):
         '''
         Fit the mixed variable model
         '''
-        #k = MixedMatern52(input_dim=self.input_dim, ARD=self.ARD,num_qual=self.num_qual) + gpf.kernels.Constant(1)
-        k = MixedMatern32(variance = variance, lengthscales=np.ones((1,self.input_dim)).reshape(-1),num_qual=self.num_qual) + gpf.kernels.Constant()
-        #k = MixedSqExp(input_dim=self.input_dim, ARD=self.ARD,num_qual=self.num_qual) + gpf.kernels.Constant(1)
+        k = MixedMatern32(variance = variance, lengthscales=np.ones((1,self.input_dim)).reshape(-1),num_qual=self.num_qual)
         self.model = gpf.models.GPR(data=(X, y), kernel=k)
-        #opt = gpf.training.AdamOptimizer(0.01)
-        #opt = gpf.training.AdamOptimizer(0.001)
-        #opt = gpf.training.RMSPropOptimizer(0.01)
-        #opt = gpf.training.AdamOptimizer(0.01)
-        #run_adam(self.model, ci_niter(3000))
         try:
-            #opt = gpf.train.ScipyOptimizer()
-            #opt.minimize(self.model)
-            #run_adam(self.model, ci_niter(3000))
             optimizer = gpf.optimizers.Scipy()
             logs = optimizer.minimize(
                 self.model.training_loss,
-                variables=self.model.trainable_variables,compile=False,
+                variables=self.model.trainable_variables,compile=True,
                 options=dict(disp=False, maxiter=200),step_callback=None)
         except Exception as e:
             print("Warning: Unable to perform optimisation of model\n")
@@ -249,11 +177,8 @@ class MVO():
             optimizer = gpf.optimizers.Scipy()
             logs = optimizer.minimize(
                 self.model.training_loss,
-                variables=self.model.trainable_variables,compile=False,
+                variables=self.model.trainable_variables,compile=True,
                 options=dict(disp=False, maxiter=200),step_callback=None)
-            #opt = gpf.training.AdamOptimizer(0.01)
-            #opt.minimize(self.model)
-        
 
     def prediction(self,X):
         """
@@ -264,6 +189,8 @@ class MVO():
             transformed = self.scaleX(X)
         else:
             transformedX = np.concatenate((self.scaleX(X[:,:self.num_quant]),X[:,:self.num_quant]),axis=1)
+
+        raise NotImplementedError()
 
     def expected_improvement(self, X):
         '''
@@ -290,7 +217,7 @@ class MVO():
         '''
         Optimise EI searching the whole domain
         '''
-        Xsamples = self.random_sample(samples=10000)
+        Xsamples = self.sample_design(samples=10000, design='halton')
 
         fvals = self.expected_improvement(Xsamples)
 
@@ -345,18 +272,3 @@ class MVO():
         indymin = np.where(y == ymin)
         xmin = X[int(indymin[0]),:]
         return xmin, ymin, Xiter, yiter
-
-@tf.function(autograph=False)
-def optimization_step(optimizer, model):
-    with tf.GradientTape(watch_accessed_variables=False) as tape:
-        tape.watch(model.trainable_variables)
-        objective = - model.log_marginal_likelihood()
-        grads = tape.gradient(objective, model.trainable_variables)
-    optimizer.apply_gradients(zip(grads, model.trainable_variables))
-    return - objective
-
-def run_adam(model, iterations):
-    adam = tf.optimizers.Adam()
-    for step in range(iterations):
-        elbo = optimization_step(adam, model)
-    return

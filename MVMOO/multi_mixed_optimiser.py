@@ -71,7 +71,7 @@ class MVMOO(MVO):
         Return an array of the pareto front for the system, set up for a minimising
         """
         ind = self.is_pareto_efficient(Y, return_mask=False)
-        self.currentfront = Y[ind,:]
+        return Y[ind,:]
 
     def EIM_Hypervolume(self, X):
         """
@@ -118,12 +118,7 @@ class MVMOO(MVO):
         Z_matrix = (f_matrix - u_matrix) / s_matrix
         EI_matrix = np.multiply((f_matrix - u_matrix), norm.cdf(Z_matrix)) + np.multiply(s_matrix, norm.pdf(Z_matrix))
         y = np.min(np.prod(r.reshape(1,2,1)  - f_matrix + EI_matrix, axis=1) - np.prod(r - f, axis=1).reshape((-1,1)),axis=0).reshape((-1,1))
-    
-        #for ix in range(nx):
-        #    Z = (f - u[ix,:]) / std[ix,:]
-        #    EIM = np.multiply((f - u[ix,:]), norm.cdf(Z)) + np.multiply(std[ix,:], norm.pdf(Z))
-        #    y[ix] = np.min(np.prod(r - f + EIM, axis=1) - np.prod(r - f, axis=1))
-        
+
         return y
 
     def EIM_Euclidean(self, X):
@@ -149,8 +144,7 @@ class MVMOO(MVO):
         nobj = np.shape(f)[1]
     
         nx = np.shape(X)[0]
-    
-        #r = 1.1 * np.ones((1, nobj))
+
         y = np.zeros((nx, 1))
     
         ulist = []
@@ -281,10 +275,7 @@ class MVMOO(MVO):
         return y
 
     def EIMoptimiserWrapper(self, Xcont, Xqual, constraints=False):
-        # Check Xcont and Xqual have the same number of rows
-        #if np.shape(Xcont)[0] != np.shape(Xqual)[0]:
-        #    X = np.concatenate((Xcont, matlib.repmat(Xqual, np.shape(Xcont)[0], 1)), axis=1)
-        #else:
+
         X = np.concatenate((Xcont.reshape((1,-1)), Xqual.reshape((1,-1))), axis=1)
 
         if constraints is not False:
@@ -293,24 +284,20 @@ class MVMOO(MVO):
         return -self.EIM_Euclidean(X)
 
     def AEIMoptimiserWrapper(self, Xcont, Xqual):
-        # Check Xcont and Xqual have the same number of rows
-        #if np.shape(Xcont)[0] != np.shape(Xqual)[0]:
-        #    X = np.concatenate((Xcont, matlib.repmat(Xqual, np.shape(Xcont)[0], 1)), axis=1)
-        #else:
+
         X = np.concatenate((Xcont.reshape((1,-1)), Xqual.reshape((1,-1))), axis=1)
 
         return -self.AEIM_Hypervolume(X)
         
             
 
-    def EIMmixedoptimiser(self, constraints, algorithm='Random', values=None):
+    def EIMmixedoptimiser(self, constraints, algorithm='Random Local', values=None):
         """
         Optimise EI search whole domain
         """
         if algorithm == 'Random':
-            #Xsamples = self.sobol_design(samples=10000)
-            Xsamples = self.halton_design(samples=10000)
-        #Xscaledsample = self.scaleX(Xsamples,store=False)
+            Xsamples = self.sample_design(samples=10000, design='halton')
+
             if constraints is False:
                 fvals = self.EIM_Hypervolume(Xsamples)
             else:
@@ -324,9 +311,8 @@ class MVMOO(MVO):
             return fmax, xmax, fvals, Xsamples
         elif algorithm == 'Random Local':
             start = time.time()
-            #Xsamples = self.sobol_design(samples=10000)
-            Xsamples = self.halton_design(samples=10000)
-        #Xscaledsample = self.scaleX(Xsamples,store=False)
+            Xsamples = self.sample_design(samples=10000, design='halton')
+
             if constraints is False:
                 fvals = self.EIM_Euclidean(Xsamples)
             else:
@@ -377,7 +363,7 @@ class MVMOO(MVO):
                     result = shgo(self.CEIM_Hypervolume,bndlist, sampling_method='sobol', n=30, iters=2)
                 return result.x, result.fun
             else:
-                sample = self.random_sample(samples=1)
+                sample = self.sample_design(samples=1, design='random')
                 contbnd = list(self.bounds[:,:self.num_quant].T)
                 contbndlist = []
                 qual = sample[:,-self.num_qual:]
@@ -411,7 +397,7 @@ class MVMOO(MVO):
                     result = shgo(self.CEIM_Hypervolume,bndlist, sampling_method='simplicial', iters=3)
                 return result.x, result.fun
             else:
-                sample = self.random_sample(samples=1)
+                sample = self.sample_design(samples=1, design='random')
                 contbnd = list(self.bounds[:,:self.num_quant].T)
                 contbndlist = []
                 qual = sample[:,-self.num_qual:]
@@ -434,9 +420,8 @@ class MVMOO(MVO):
     
     def AEIMmixedoptimiser(self, algorithm='Random', values=None):
 
-        # Get estimate for mean variance of model using sobol sampling
-        X = self.sobol_design(samples=10000)
-        #X = self.random_sample(samples=10000)
+        # Get estimate for mean variance of model using halton sampling
+        X = self.sample_design(samples=10000, design='halton')
 
         varlist = []
         for iobj in range(self.num_obj):
@@ -453,10 +438,9 @@ class MVMOO(MVO):
         # Optimise acquisition
 
         if algorithm == 'Random':
-            #Xsamples = self.sobol_design(samples=10000)
-            #Xsamples = self.random_sample(samples=10000)
-            Xsamples = self.halton_design(samples=10000)
-        #Xscaledsample = self.scaleX(Xsamples,store=False)
+
+            Xsamples = self.sample_design(samples=10000, design='halton')
+
             fvals = self.AEIM_Hypervolume(Xsamples)
 
             fmax = np.amax(fvals)
@@ -478,7 +462,7 @@ class MVMOO(MVO):
                 
                 return result.x, result.fun
             else:
-                sample = self.random_sample(samples=1)
+                sample = self.sample_design(samples=1, design='random')
                 contbnd = list(self.bounds[:,:self.num_quant].T)
                 contbndlist = []
                 qual = sample[:,-self.num_qual:]
@@ -510,7 +494,7 @@ class MVMOO(MVO):
                 
                 return result.x, result.fun
             else:
-                sample = self.random_sample(samples=1)
+                sample = self.sample_design(samples=1, design='random')
                 contbnd = list(self.bounds[:,:self.num_quant].T)
                 contbndlist = []
                 qual = sample[:,-self.num_qual:]
@@ -537,14 +521,18 @@ class MVMOO(MVO):
         """
         Suggest the next condition for evaluation
         """
-        #print('Hi')
         if constraints is False:
-            self.models = self.generatemodels(X, Y)
-            self.paretofront(self.Yscaled)
+            try:
+                self.models = self.generatemodels(X, Y)
+            except:
+                print('Initial model optimisation failed, retrying with new initial value for variance')
+                self.models = self.generatemodels(X, Y, variance=0.1)
+
+            self.currentfront = self.paretofront(self.Yscaled)
 
             means = []
             for model in self.models:
-                mean, _ = model.predict_y(self.halton_design(samples=2))
+                mean, _ = model.predict_y(self.sample_design(samples=2, design='halton'))
                 means.append(mean.numpy())
             if np.any(means == np.nan):
                 print("Retraining model with new starting variance")
@@ -556,7 +544,7 @@ class MVMOO(MVO):
                 return xmax.reshape(1,-1), fmax
  
         self.models = self.generatemodels(X,Y)
-        self.paretofront(self.Yscaled)
+        self.currentfront = self.paretofront(self.Yscaled)
         self.constrainedmodels = self.generatemodels(X, constraints, scale=False)
 
         fmax, xmax = self.EIMmixedoptimiser(constraints, algorithm='Simplical')

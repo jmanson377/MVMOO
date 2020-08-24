@@ -62,7 +62,7 @@ X = np.random.random_sample((20,1))
 Xqual = np.random.randint(1,3,(20,1))
 Xcomb = np.concatenate((X,Xqual),1)
 
-Y = ftrig(Xcomb)
+Y = ftrig(Xcomb) + 0.1 * np.random.randn(20,1)
 
 k1 = MixedMatern32(input_dim=2,num_qual=1, lengthscales=np.ones((np.shape(Xcomb)[1])))
 
@@ -82,8 +82,8 @@ end = time.time()
 print(end-start)
 
 xx = np.concatenate((np.linspace(0, 1.1, 100).reshape(100, 1),1*np.ones((100,1))),1)
-mean, var = mixedmodel.predict_y(xx)
-line, = plt.plot(xx[:,0], mean, lw=2)
+mean, var = mixedmodel.predict_f(xx)
+line, = plt.plot(xx[:,0], mean.numpy(), lw=2)
 _ = plt.fill_between(xx[:,0], mean[:,0] - 2*np.sqrt(var[:,0]), mean[:,0] + 2*np.sqrt(var[:,0]), color=line.get_color(), alpha=0.2)
 plt.plot(xx[:,0],ftrig(xx))
 plt.scatter(Xcomb[(Xqual==1).reshape(-1),0],Y[(Xqual==1).reshape(-1)])
@@ -101,10 +101,9 @@ print_summary(mixedmodel)
 
 ## Multi-Objective test
 optimiser = MVMOO(input_dim=3, num_qual=1, num_obj=2, bounds=np.array([[-2,-2,1],[2,2,2]]))
-Xtest = optimiser.random_sample(samples=100000)
+Xtest = optimiser.sample_design(samples=100000, design='random')
 Ytest = discretevlmop2(Xtest)
-ind = is_pareto(Ytest)
-Yfront = Ytest[ind,:]
+Yfront = optimiser.paretofront(Ytest)
 sortedind = np.argsort(Yfront[:,0])
 Ysorted = Yfront[sortedind,:]
 
@@ -117,9 +116,9 @@ plt.show()
 Xstore = []
 Ystore = []
 for k in range(1):
-    X = optimiser.initial_design(samples=5)
+    X = optimiser.sample_design(samples=5, design='lhc')
     Y = discretevlmop2(X)
-    for i in range(1):
+    for i in range(30):
         start = time.time()
         xmax, _ = optimiser.multinextcondition(X,Y)
         end = time.time()
