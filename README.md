@@ -36,7 +36,7 @@ def discretevlmop2(s):
             
     return np.hstack((y1, y2))
 ```
-Once the packages have been imported you can perform the multi-objective optimisation as follows
+Once the packages have been imported you can perform the multi-objective optimisation as follows, in the current form the bounds for discrete variables must be place at the end of the bounds array
 ```python
 optimiser = MVMOO(input_dim=3, num_qual=1, num_obj=2, bounds=np.array([[-2,-2,1],[2,2,2]]))
 Xtest = optimiser.sample_design(samples=100000, design='random')
