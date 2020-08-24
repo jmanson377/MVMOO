@@ -310,7 +310,6 @@ class MVMOO(MVO):
                 return fmax, xmax
             return fmax, xmax, fvals, Xsamples
         elif algorithm == 'Random Local':
-            start = time.time()
             Xsamples = self.sample_design(samples=10000, design='halton')
 
             if constraints is False:
@@ -321,13 +320,6 @@ class MVMOO(MVO):
             fmax = np.amax(fvals)
             indymax = np.where(fvals == fmax)
             xmax = Xsamples[int(indymax[0][0]),:]
-            end = time.time()
-            print(xmax)
-            print(fmax)
-            print("Time elapsed sampling: " + str(end - start) + " seconds.")
-            test = False
-            if test == True:
-                return fmax, xmax
             qual = xmax[-self.num_qual:]
 
             bnd = list(self.bounds[:,:self.num_quant].T)
@@ -336,12 +328,7 @@ class MVMOO(MVO):
             for element in bnd:
                 bndlist.append(tuple(element))
 
-            start = time.time()
             result = stats.optimize.minimize(self.EIMoptimiserWrapper, xmax[:-self.num_qual].reshape(-1), args=(qual,constraints), bounds=bndlist,method='SLSQP')
-            end = time.time()
-            print(result.x)
-            print(result.fun)
-            print("Time elapsed optimise: " + str(end - start) + " seconds.")
             if values is None:
                 
                 return result.fun, np.concatenate((result.x, qual),axis=None)

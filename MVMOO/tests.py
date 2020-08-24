@@ -122,7 +122,7 @@ for k in range(1):
         start = time.time()
         xmax, _ = optimiser.multinextcondition(X,Y)
         end = time.time()
-        print("Time elapsed get next condition: " + str(end - start) + " seconds.")
+        print("Time elapsed to get next condition: " + str(end - start) + " seconds.")
         ysample = discretevlmop2(xmax.reshape((1,3)))
         print(xmax)
         print(ysample)

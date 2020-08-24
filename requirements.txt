@@ -1,0 +1,9 @@
+gpflow==2.0.5
+matplotlib==3.2.2
+numpy==1.18.5
+pyDOE2==1.3.0
+scipy==1.4.1
+sobol==0.9
+sobol-seq==0.2.0
+tensorflow==2.3.0
+tensorflow-probability==0.11.0
