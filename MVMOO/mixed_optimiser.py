@@ -1,14 +1,9 @@
 import gpflow as gpf
 import numpy as np
-import matplotlib.pyplot as plt
-import tensorflow as tf
 from scipy.stats import norm
-
 from pyDOE2 import lhs
 from mixedkernel import MixedMatern52, MixedMatern32, MixedSqExp
 import sobol_seq
-
-from gpflow.ci_utils import ci_niter
 
 class MVO():
     '''

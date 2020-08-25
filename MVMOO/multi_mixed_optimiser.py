@@ -1,14 +1,8 @@
-import gpflow as gpf
 import numpy as np
-import matplotlib.pyplot as plt
-import tensorflow as tf
 from scipy.stats import norm
 from mixed_optimiser import MVO
-import numpy.matlib as matlib
 from scipy.optimize import shgo, differential_evolution, dual_annealing
 import scipy as stats
-import sobol_seq
-import time
 
 class MVMOO(MVO):
     """
