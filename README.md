@@ -23,7 +23,7 @@ An example on how to use the optimisation algorithm is given below. This is for 
 ```python
 import numpy as np
 import matplotlib.pyplot as plt
-from multi_mixed_optimizer import MVMOO
+from MVMOO import MVMOO
 
 def discretevlmop2(s):
     x = s[:,:2]
