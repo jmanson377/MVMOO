@@ -2,7 +2,7 @@ import gpflow as gpf
 import numpy as np
 from scipy.stats import norm
 from pyDOE2 import lhs
-from mixedkernel import MixedMatern52, MixedMatern32, MixedSqExp
+from .mixedkernel import MixedMatern52, MixedMatern32, MixedSqExp
 import sobol_seq
 
 class MVO():

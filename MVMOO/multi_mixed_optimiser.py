@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.stats import norm
-from mixed_optimiser import MVO
+from .mixed_optimiser import MVO
 from scipy.optimize import shgo, differential_evolution, dual_annealing
 import scipy as stats
 

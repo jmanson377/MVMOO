@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 plt.style.use('seaborn-darkgrid')
 from gpflow.utilities import print_summary
 import time
-from mixedkernel import MixedMatern32
-from multi_mixed_optimiser import MVMOO
+from MVMOO.mixedkernel import MixedMatern32
+from MVMOO import MVMOO
 
 # Discrete VLMOP2 test problem multi-objective
 
