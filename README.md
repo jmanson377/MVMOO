@@ -24,6 +24,7 @@ An example on how to use the optimisation algorithm is given below. This is for 
 import numpy as np
 import matplotlib.pyplot as plt
 from MVMOO import MVMOO
+import time
 
 def discretevlmop2(s):
     x = s[:,:2]
