@@ -102,7 +102,7 @@ class MVO():
         qualbounds = self.bounds[:,self.num_quant:]
 
         for i in range(self.num_qual):
-            qlist.append(np.linspace(qualbounds[0,i],qualbounds[1,i],qualbounds[1,i]))
+            qlist.append(np.linspace(qualbounds[0,i],qualbounds[1,i],int(qualbounds[1,i])))
 
         Xqual = np.array(np.meshgrid(*qlist)).T.reshape(-1,self.num_qual)
 
