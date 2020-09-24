@@ -10,13 +10,21 @@ A future release utilising PyPI is planned. In the meantime you can clone the re
 ```git
 git clone https://github.com/jmanson377/MVMOO
 ```
+
+Then you can install the project locally using the following command, when in the project directory
+
+```cmd
+cd <project directory>
+pip install .
+```
 ## Usage
 An example on how to use the optimisation algorithm is given below. This is for the optimisation of a mixed variable version of the VLMOP2 test problem
 
 ```python
 import numpy as np
 import matplotlib.pyplot as plt
-from multi_mixed_optimizer import MVMOO
+from MVMOO import MVMOO
+import time
 
 def discretevlmop2(s):
     x = s[:,:2]
