@@ -7,7 +7,7 @@ setup(
     license='Apache',
     description='Mixed Variable Multi-Objective Optimization',
     long_description=open('README.md').read(),
-    install_requires=['gpflow==2.0.5',
+    install_requires=['gpflow>=2.0.5',
 'matplotlib>=3.2.2',
 'numpy>=1.18.5',
 'pyDOE2>=1.3.0',

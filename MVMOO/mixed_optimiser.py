@@ -10,13 +10,15 @@ class MVO():
     Class for mixed varibale bayesian optimisation
     '''
 
-    def __init__(self, input_dim=1, num_qual=0, bounds=None):
+    def __init__(self, input_dim=1, num_qual=0, bounds=None, k_type='matern3', dist='manhattan'):
         '''
         Initialisation of the class
         '''
         self.input_dim = input_dim
         self.num_qual = num_qual
         self.num_quant = input_dim - num_qual
+        self.k_type = k_type
+        self.dist = dist
 
         if bounds is None:
             bounds = np.zeros((2,input_dim))
@@ -158,7 +160,13 @@ class MVO():
         '''
         Fit the mixed variable model
         '''
-        k = MixedMatern32(variance = variance, lengthscales=np.ones((1,self.input_dim)).reshape(-1),num_qual=self.num_qual)
+        if self.k_type == 'matern3':
+            k = MixedMatern32(variance = variance, lengthscales=np.ones((1,self.input_dim)).reshape(-1),num_qual=self.num_qual, dist=self.dist)
+        elif self.k_type == 'matern5':
+            k = MixedMatern52(variance = variance, lengthscales=np.ones((1,self.input_dim)).reshape(-1),num_qual=self.num_qual, dist=self.dist)
+        else:
+            k = MixedSqExp(variance = variance, lengthscales=np.ones((1,self.input_dim)).reshape(-1),num_qual=self.num_qual, dist=self.dist)
+        
         self.model = gpf.models.GPR(data=(X, y), kernel=k)
         try:
             optimizer = gpf.optimizers.Scipy()

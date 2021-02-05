@@ -100,7 +100,7 @@ plt.show()
 print_summary(mixedmodel)
 
 ## Multi-Objective test
-optimiser = MVMOO(input_dim=3, num_qual=1, num_obj=2, bounds=np.array([[-2,-2,1],[2,2,2]]))
+optimiser = MVMOO(input_dim=3, num_qual=1, num_obj=2, bounds=np.array([[-2.,-2.,1.],[2.,2.,2.]]))
 Xtest = optimiser.sample_design(samples=100000, design='random')
 Ytest = discretevlmop2(Xtest)
 Yfront = optimiser.paretofront(Ytest)

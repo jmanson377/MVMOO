@@ -8,11 +8,11 @@ class MVMOO(MVO):
     """
     Multi variate mixed variable optimisation
     """
-    def __init__(self, input_dim=1, num_qual=0, num_obj=2, bounds=None):
+    def __init__(self, input_dim=1, num_qual=0, num_obj=2, bounds=None, k_type='matern3', dist='manhattan'):
         """
         Initialisation of the class
         """
-        super().__init__(input_dim=input_dim, num_qual=num_qual, bounds=bounds)
+        super().__init__(input_dim=input_dim, num_qual=num_qual, bounds=bounds, dist=dist, k_type=k_type)
 
         self.num_obj = num_obj
 
@@ -275,7 +275,7 @@ class MVMOO(MVO):
         if constraints is not False:
             return -self.CEIM_Hypervolume(X)
 
-        return -self.EIM_Euclidean(X)
+        return -self.EIM_Euclidean(X).reshape(-1)
 
     def AEIMoptimiserWrapper(self, Xcont, Xqual):
 
@@ -531,4 +531,3 @@ class MVMOO(MVO):
         fmax, xmax = self.EIMmixedoptimiser(constraints, algorithm='Simplical')
         if values is None:
             return xmax.reshape(1,-1), fmax
-        

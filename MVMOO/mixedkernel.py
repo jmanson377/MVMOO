@@ -28,7 +28,7 @@ class Mixed(gpf.kernels.Kernel):
     Utilises Gower distance metric
     """
     def __init__(self, input_dim=1, variance=1.0, lengthscales=1.0, 
-                num_qual=0, **kwargs): 
+                num_qual=0, dist='manhattan',**kwargs): 
         """
         :param variance: the (initial) value for the variance parameter
         :param lengthscale: the (initial) value for the lengthscale parameter(s),
@@ -47,6 +47,7 @@ class Mixed(gpf.kernels.Kernel):
         self.lengthscales = gpf.Parameter(lengthscales, transform=positive())
         self._validate_ard_active_dims(self.lengthscales)
         self.num_qual = num_qual
+        self.dist = dist
 
     def _scaled_square_dist(self, X, X2, lengthscales):
         """
@@ -123,7 +124,10 @@ class Mixed(gpf.kernels.Kernel):
     def K(self, X, X2=None,presliced=False):
         #if not presliced:
         #    X, X2 = self._slice(X, X2)
-        return self.K_r(tf.sqrt(tf.maximum(self.gower_distance(X, X2), 1e-36)))
+        if self.dist == 'manhattan':
+            return self.K_r(tf.sqrt(tf.maximum(self.gower_distance(X, X2), 1e-36)))
+        # self.K_r(tf.sqrt(tf.maximum(self.gower_distance(X, X2), 1e-36))) manhattan self.K_r(tf.maximum(self.gower_distance(X, X2), 1e-36)) euclidean
+        return self.K_r(tf.maximum(self.gower_distance(X, X2), 1e-36))
 
     def K_diag(self, X,presliced=False):
         return tf.fill(tf.shape(X)[:-1], tf.squeeze(self.variance))
