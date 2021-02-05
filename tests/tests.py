@@ -62,9 +62,10 @@ X = np.random.random_sample((20,1))
 Xqual = np.random.randint(1,3,(20,1))
 Xcomb = np.concatenate((X,Xqual),1)
 
-Y = ftrig(Xcomb) + 0.1 * np.random.randn(20,1)
+Y = ftrig(Xcomb) #+ 0.1 * np.random.randn(20,1)
 
-k1 = MixedMatern32(input_dim=2,num_qual=1, lengthscales=np.ones((np.shape(Xcomb)[1])))
+k1 = MixedMatern32(input_dim=2,num_qual=1, lengthscales=np.ones((np.shape(Xcomb)[1])),dist='manhattan')
+k2 = MixedMatern32(input_dim=2,num_qual=1, lengthscales=np.ones((np.shape(Xcomb)[1])),dist='manhattan')
 
 k = k1 #+ k2
 
@@ -87,6 +88,23 @@ line, = plt.plot(xx[:,0], mean.numpy(), lw=2)
 _ = plt.fill_between(xx[:,0], mean[:,0] - 2*np.sqrt(var[:,0]), mean[:,0] + 2*np.sqrt(var[:,0]), color=line.get_color(), alpha=0.2)
 plt.plot(xx[:,0],ftrig(xx))
 plt.scatter(Xcomb[(Xqual==1).reshape(-1),0],Y[(Xqual==1).reshape(-1)])
+
+k=k2
+
+mixedmodel = gpf.models.GPR(data=(Xcomb, Y), kernel=k)
+opt = gpf.optimizers.Scipy()
+logs = opt.minimize(
+    mixedmodel.training_loss,
+    variables=mixedmodel.trainable_variables,compile=False,
+    options=dict(disp=False, maxiter=200),step_callback=None,
+)
+
+xx = np.concatenate((np.linspace(0, 1.1, 100).reshape(100, 1),1*np.ones((100,1))),1)
+mean, var = mixedmodel.predict_f(xx)
+line, = plt.plot(xx[:,0], mean.numpy(), lw=2, color='purple')
+_ = plt.fill_between(xx[:,0], mean[:,0] - 2*np.sqrt(var[:,0]), mean[:,0] + 2*np.sqrt(var[:,0]), color=line.get_color(), alpha=0.2)
+
+
 plt.show()
 
 xx = np.concatenate((np.linspace(0, 1.1, 100).reshape(100, 1),2*np.ones((100,1))),1)
@@ -120,7 +138,7 @@ for k in range(1):
     Y = discretevlmop2(X)
     for i in range(30):
         start = time.time()
-        xmax, _ = optimiser.multinextcondition(X,Y)
+        xmax, _ = optimiser.multinextcondition(X,Y, method='AEIM')
         end = time.time()
         print("Time elapsed to get next condition: " + str(end - start) + " seconds.")
         ysample = discretevlmop2(xmax.reshape((1,3)))

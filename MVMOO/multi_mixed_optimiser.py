@@ -268,6 +268,55 @@ class MVMOO(MVO):
         
         return y
 
+    def AEIM_Euclidean(self, X):
+        """
+        Calculate the expected improvment matrix for a candidate point
+
+        @ARTICLE{7908974, 
+            author={D. {Zhan} and Y. {Cheng} and J. {Liu}}, 
+            journal={IEEE Transactions on Evolutionary Computation}, 
+            title={Expected Improvement Matrix-Based Infill Criteria for Expensive Multiobjective Optimization}, 
+            year={2017}, 
+            volume={21}, 
+            number={6}, 
+            pages={956-975}, 
+            doi={10.1109/TEVC.2017.2697503}, 
+            ISSN={1089-778X}, 
+            month={Dec}}
+        """
+        f = self.currentfront
+        c = self.contextual
+
+        nfx = np.shape(f)[0]
+    
+        nobj = np.shape(f)[1]
+    
+        nx = np.shape(X)[0]
+
+        y = np.zeros((nx, 1))
+    
+        ulist = []
+        varlist = []
+    
+        for iobj in range(nobj):
+            u, var = self.models[iobj].predict_f(X)
+            ulist.append(u)
+            varlist.append(var)
+            
+        u = np.concatenate(ulist, axis=1)
+        var = np.concatenate(varlist, axis=1)
+        std = np.sqrt(np.maximum(0,var))
+
+        u_matrix = np.reshape(u.T,(1,nobj,nx)) * np.ones((nfx,1,1))
+        s_matrix = np.reshape(std.T,(1,nobj,nx)) * np.ones((nfx,1,1))
+        f_matrix = f.reshape((nfx,nobj,1)) * np.ones((1,1,nx))
+        c_matrix = c.reshape((nfx,nobj,1)) * np.ones((1,1,nx))
+        Z_matrix = (f_matrix - u_matrix - c_matrix) / s_matrix
+        EI_matrix = np.multiply((f_matrix - u_matrix), norm.cdf(Z_matrix)) + np.multiply(s_matrix, norm.pdf(Z_matrix))
+        y = np.min(np.sqrt(np.sum(EI_matrix**2,axis=1)),axis=0).reshape(-1,1)
+
+        return y
+
     def EIMoptimiserWrapper(self, Xcont, Xqual, constraints=False):
 
         X = np.concatenate((Xcont.reshape((1,-1)), Xqual.reshape((1,-1))), axis=1)
@@ -277,11 +326,11 @@ class MVMOO(MVO):
 
         return -self.EIM_Euclidean(X).reshape(-1)
 
-    def AEIMoptimiserWrapper(self, Xcont, Xqual):
+    def AEIMoptimiserWrapper(self, Xcont, Xqual, constraints=False):
 
         X = np.concatenate((Xcont.reshape((1,-1)), Xqual.reshape((1,-1))), axis=1)
 
-        return -self.AEIM_Hypervolume(X)
+        return -self.AEIM_Euclidean(X).reshape(-1)
         
             
 
@@ -399,7 +448,7 @@ class MVMOO(MVO):
                 return fval, xmax        
 
     
-    def AEIMmixedoptimiser(self, algorithm='Random', values=None):
+    def AEIMmixedoptimiser(self, constraints, algorithm='Random', values=None):
 
         # Get estimate for mean variance of model using halton sampling
         X = self.sample_design(samples=10000, design='halton')
@@ -410,11 +459,12 @@ class MVMOO(MVO):
             varlist.append(var)
 
         var = np.concatenate(varlist, axis=1)
-        meanvar = np.mean(var)
+        meanvar = np.mean(var,axis=0)
 
         f = self.currentfront
 
         self.contextual = np.divide(meanvar, f)
+        print(self.contextual)
 
         # Optimise acquisition
 
@@ -429,6 +479,32 @@ class MVMOO(MVO):
             xmax = Xsamples[int(indymax[0][0]),:]
             if values is None:
                 return fmax, xmax
+            return fmax, xmax, fvals, Xsamples
+
+        elif algorithm == 'Random Local':
+            Xsamples = self.sample_design(samples=10000, design='halton')
+
+            if constraints is False:
+                fvals = self.AEIM_Euclidean(Xsamples)
+            else:
+                raise NotImplementedError()
+
+            fmax = np.amax(fvals)
+            indymax = np.where(fvals == fmax)
+            xmax = Xsamples[int(indymax[0][0]),:]
+            qual = xmax[-self.num_qual:]
+
+            bnd = list(self.bounds[:,:self.num_quant].T)
+            bndlist = []
+
+            for element in bnd:
+                bndlist.append(tuple(element))
+
+            result = stats.optimize.minimize(self.AEIMoptimiserWrapper, xmax[:-self.num_qual].reshape(-1), args=(qual,constraints), bounds=bndlist,method='SLSQP')
+            if values is None:
+                
+                return result.fun, np.concatenate((result.x, qual),axis=None)
+
             return fmax, xmax, fvals, Xsamples
 
         elif algorithm == 'SHGO':
@@ -498,7 +574,7 @@ class MVMOO(MVO):
 
         return      
 
-    def multinextcondition(self, X, Y, constraints=False, values=None):
+    def multinextcondition(self, X, Y, constraints=False, values=None, method='EIM'):
         """
         Suggest the next condition for evaluation
         """
@@ -519,8 +595,11 @@ class MVMOO(MVO):
                 print("Retraining model with new starting variance")
                 self.models = self.generatemodels(X, Y, variance=0.1)
 
-            fmax, xmax = self.EIMmixedoptimiser(constraints, algorithm='Random Local')
-            #fmax, xmax = self.AEIMmixedoptimiser(algorithm='Random')
+            if method == 'AEIM':
+                fmax, xmax = self.AEIMmixedoptimiser(constraints, algorithm='Random Local')
+            else:
+                fmax, xmax = self.EIMmixedoptimiser(constraints, algorithm='Random Local')
+            
             if values is None:
                 return xmax.reshape(1,-1), fmax
  
