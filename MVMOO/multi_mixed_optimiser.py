@@ -464,7 +464,7 @@ class MVMOO(MVO):
         f = self.currentfront
 
         self.contextual = np.divide(meanvar, f)
-        print(self.contextual)
+
 
         # Optimise acquisition
 
