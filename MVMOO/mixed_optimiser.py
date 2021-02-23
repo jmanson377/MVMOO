@@ -140,7 +140,7 @@ class MVO():
             
 
         elif mode == 'bounds':
-            return (X - self.bounds[0,:self.num_quant]) / (self.bounds[1,:self.num_quant] - self.bounds[0,:self.num_quant])
+            return np.concatenate(((Xcont - self.bounds[0,:self.num_quant]) / (self.bounds[1,:self.num_quant] - self.bounds[0,:self.num_quant]),Xqual),axis=1)
 
         else:
             raise ValueError("Select either 'meanstd' or 'bounds' scaling")

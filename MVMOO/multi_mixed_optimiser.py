@@ -8,13 +8,14 @@ class MVMOO(MVO):
     """
     Multi variate mixed variable optimisation
     """
-    def __init__(self, input_dim=1, num_qual=0, num_obj=2, bounds=None, k_type='matern3', dist='manhattan'):
+    def __init__(self, input_dim=1, num_qual=0, num_obj=2, bounds=None, k_type='matern3', dist='manhattan', scale='bounds'):
         """
         Initialisation of the class
         """
         super().__init__(input_dim=input_dim, num_qual=num_qual, bounds=bounds, dist=dist, k_type=k_type)
 
         self.num_obj = num_obj
+        self.scale = scale
 
 
     def generatemodels(self, X, Y, scale=True, variance=1.0):
@@ -25,9 +26,9 @@ class MVMOO(MVO):
         models = []
         if scale is True:
             self.Yscaled = self.scaley(Y)
-            self.Xscaled = self.scaleX(X)
+            self.Xscaled = self.scaleX(X,mode=self.scale)
             for i in range(nobj):
-                self.fitmodel(X, self.Yscaled[:,i].reshape((-1,1)), variance=variance)
+                self.fitmodel(self.Xscaled, self.Yscaled[:,i].reshape((-1,1)), variance=variance)
                 models.append(self.model)
             return models
         for i in range(nobj):
@@ -143,6 +144,8 @@ class MVMOO(MVO):
     
         ulist = []
         varlist = []
+
+        X = self.scaleX(X, mode='bounds')
     
         for iobj in range(nobj):
             u, var = self.models[iobj].predict_f(X)
@@ -297,6 +300,7 @@ class MVMOO(MVO):
     
         ulist = []
         varlist = []
+        X = self.scaleX(X, mode='bounds')
     
         for iobj in range(nobj):
             u, var = self.models[iobj].predict_f(X)
@@ -347,8 +351,8 @@ class MVMOO(MVO):
                 fvals = self.CEIM_Hypervolume(Xsamples)
 
             fmax = np.amax(fvals)
-            indymax = np.where(fvals == fmax)
-            xmax = Xsamples[int(indymax[0][0]),:]
+            indymax = np.argmax(fvals)
+            xmax = Xsamples[indymax,:]
             if values is None:
                 return fmax, xmax
             return fmax, xmax, fvals, Xsamples
@@ -361,8 +365,8 @@ class MVMOO(MVO):
                 fvals = self.CEIM_Hypervolume(Xsamples)
 
             fmax = np.amax(fvals)
-            indymax = np.where(fvals == fmax)
-            xmax = Xsamples[int(indymax[0][0]),:]
+            indymax = np.argmax(fvals)
+            xmax = Xsamples[indymax,:]
             qual = xmax[-self.num_qual:]
 
             bnd = list(self.bounds[:,:self.num_quant].T)
@@ -452,7 +456,7 @@ class MVMOO(MVO):
 
         # Get estimate for mean variance of model using halton sampling
         X = self.sample_design(samples=10000, design='halton')
-
+        X = self.scaleX(X, mode='bounds')
         varlist = []
         for iobj in range(self.num_obj):
             _ , var = self.models[iobj].predict_y(X)
@@ -475,8 +479,8 @@ class MVMOO(MVO):
             fvals = self.AEIM_Hypervolume(Xsamples)
 
             fmax = np.amax(fvals)
-            indymax = np.where(fvals == fmax)
-            xmax = Xsamples[int(indymax[0][0]),:]
+            indymax = np.argmax(fvals)
+            xmax = Xsamples[indymax,:]
             if values is None:
                 return fmax, xmax
             return fmax, xmax, fvals, Xsamples
@@ -490,8 +494,8 @@ class MVMOO(MVO):
                 raise NotImplementedError()
 
             fmax = np.amax(fvals)
-            indymax = np.where(fvals == fmax)
-            xmax = Xsamples[int(indymax[0][0]),:]
+            indymax = np.argmax(fvals)
+            xmax = Xsamples[indymax,:]
             qual = xmax[-self.num_qual:]
 
             bnd = list(self.bounds[:,:self.num_quant].T)
@@ -580,10 +584,20 @@ class MVMOO(MVO):
         """
         if constraints is False:
             try:
+                self.k_type = 'matern3'
                 self.models = self.generatemodels(X, Y)
             except:
-                print('Initial model optimisation failed, retrying with new initial value for variance')
-                self.models = self.generatemodels(X, Y, variance=0.1)
+                print('Initial model optimisation failed, retrying with new kernel')
+                try:
+                    self.k_type = 'matern5'
+                    self.models = self.generatemodels(X, Y)
+                except:
+                    print('Model optimisation failed, retrying with new value of variance')
+                    for variance in [0.1,1,2,10]:
+                        try:
+                            self.models = self.generatemodels(X, Y, variance=variance)
+                        except:
+                            print('Model optimisation failed, retrying with new value of variance')
 
             self.currentfront = self.paretofront(self.Yscaled)
 
