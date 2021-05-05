@@ -4,6 +4,7 @@ from scipy.stats import norm
 from pyDOE2 import lhs
 from .mixedkernel import MixedMatern52, MixedMatern32, MixedSqExp
 import sobol_seq
+import tensorflow as tf
 
 class MVO():
     '''
@@ -173,15 +174,24 @@ class MVO():
             logs = optimizer.minimize(
                 self.model.training_loss,
                 variables=self.model.trainable_variables,compile=True,
-                options=dict(disp=False, maxiter=200),step_callback=None)
-        except Exception as e:
-            print("Warning: Unable to perform optimisation of model\n")
-            print(e)
-            optimizer = gpf.optimizers.Scipy()
-            logs = optimizer.minimize(
-                self.model.training_loss,
-                variables=self.model.trainable_variables,compile=True,
-                options=dict(disp=False, maxiter=200),step_callback=None)
+                options=dict(disp=False, maxiter=2000),step_callback=None)
+        except:
+            print("Warning: Unable to perform initial optimisation of model\nRetrying with Adam optimiser")
+            if self.k_type == 'matern3':
+                k = MixedMatern32(variance = variance, lengthscales=np.ones((1,self.input_dim)).reshape(-1),num_qual=self.num_qual, dist=self.dist)
+            elif self.k_type == 'matern5':
+                k = MixedMatern52(variance = variance, lengthscales=np.ones((1,self.input_dim)).reshape(-1),num_qual=self.num_qual, dist=self.dist)
+            else:
+                k = MixedSqExp(variance = variance, lengthscales=np.ones((1,self.input_dim)).reshape(-1),num_qual=self.num_qual, dist=self.dist)
+            self.model = gpf.models.GPR(data=(X, y), kernel=k)
+            adam_vars = self.model.trainable_variables
+            adam_opt = tf.optimizers.Adam(0.01)
+            @tf.function
+            def optimisation_step():
+                adam_opt.minimize(self.model.training_loss, adam_vars)
+            epochs = 10000
+            for epoch in range(1, epochs + 1):
+                optimisation_step()
 
     def prediction(self,X):
         """

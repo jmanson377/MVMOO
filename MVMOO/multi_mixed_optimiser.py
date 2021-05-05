@@ -68,7 +68,7 @@ class MVMOO(MVO):
         ind = self.is_pareto_efficient(Y, return_mask=False)
         return Y[ind,:]
 
-    def EIM_Hypervolume(self, X):
+    def EIM(self, X, mode='euclidean'):
         """
         Calculate the expected improvment matrix for a candidate point
 
@@ -97,6 +97,8 @@ class MVMOO(MVO):
     
         ulist = []
         varlist = []
+
+        X = self.scaleX(X, mode='bounds')
     
         for iobj in range(nobj):
             u, var = self.models[iobj].predict_y(X)
@@ -112,56 +114,21 @@ class MVMOO(MVO):
         f_matrix = f.reshape((nfx,nobj,1)) * np.ones((1,1,nx))
         Z_matrix = (f_matrix - u_matrix) / s_matrix
         EI_matrix = np.multiply((f_matrix - u_matrix), norm.cdf(Z_matrix)) + np.multiply(s_matrix, norm.pdf(Z_matrix))
-        y = np.min(np.prod(r.reshape(1,2,1)  - f_matrix + EI_matrix, axis=1) - np.prod(r - f, axis=1).reshape((-1,1)),axis=0).reshape((-1,1))
-
-        return y
-
-    def EIM_Euclidean(self, X):
-        """
-        Calculate the expected improvment matrix for a candidate point
-
-        @ARTICLE{7908974, 
-            author={D. {Zhan} and Y. {Cheng} and J. {Liu}}, 
-            journal={IEEE Transactions on Evolutionary Computation}, 
-            title={Expected Improvement Matrix-Based Infill Criteria for Expensive Multiobjective Optimization}, 
-            year={2017}, 
-            volume={21}, 
-            number={6}, 
-            pages={956-975}, 
-            doi={10.1109/TEVC.2017.2697503}, 
-            ISSN={1089-778X}, 
-            month={Dec}}
-        """
-        f = self.currentfront
-
-        nfx = np.shape(f)[0]
-    
-        nobj = np.shape(f)[1]
-    
-        nx = np.shape(X)[0]
-
-        y = np.zeros((nx, 1))
-    
-        ulist = []
-        varlist = []
-
-        X = self.scaleX(X, mode='bounds')
-    
-        for iobj in range(nobj):
-            u, var = self.models[iobj].predict_f(X)
-            ulist.append(u)
-            varlist.append(var)
-            
-        u = np.concatenate(ulist, axis=1)
-        var = np.concatenate(varlist, axis=1)
-        std = np.sqrt(np.maximum(0,var))
-
-        u_matrix = np.reshape(u.T,(1,nobj,nx)) * np.ones((nfx,1,1))
-        s_matrix = np.reshape(std.T,(1,nobj,nx)) * np.ones((nfx,1,1))
-        f_matrix = f.reshape((nfx,nobj,1)) * np.ones((1,1,nx))
-        Z_matrix = (f_matrix - u_matrix) / s_matrix
-        EI_matrix = np.multiply((f_matrix - u_matrix), norm.cdf(Z_matrix)) + np.multiply(s_matrix, norm.pdf(Z_matrix))
-        y = np.min(np.sqrt(np.sum(EI_matrix**2,axis=1)),axis=0).reshape(-1,1)
+        if mode == 'euclidean':
+            y = np.min(np.sqrt(np.sum(EI_matrix**2,axis=1)),axis=0).reshape(-1,1)
+        elif mode == 'hypervolume':
+            y = np.min(np.prod(r.reshape(1,2,1)  - f_matrix + EI_matrix, axis=1) - np.prod(r - f, axis=1).reshape((-1,1)),axis=0).reshape((-1,1))
+        elif mode == 'maxmin':
+            y = np.min(np.max(EI_matrix,axis=1),axis=0).reshape(-1,1)
+        elif mode == 'combine':
+            y = np.min(np.sqrt(np.sum(EI_matrix**2,axis=1)),axis=0).reshape(-1,1) +\
+                 np.min(np.prod(r.reshape(1,2,1)  - f_matrix + EI_matrix, axis=1) - \
+                     np.prod(r - f, axis=1).reshape((-1,1)),axis=0).reshape((-1,1))
+        else:
+            y1 = np.min(np.sqrt(np.sum(EI_matrix**2,axis=1)),axis=0).reshape(-1,1)
+            y2 = np.min(np.prod(r.reshape(1,2,1)  - f_matrix + EI_matrix, axis=1) - np.prod(r - f, axis=1).reshape((-1,1)),axis=0).reshape((-1,1))
+            #y3 = np.min(np.max(EI_matrix,axis=1),axis=0).reshape(-1,1)
+            return np.hstack((y1,y2))
 
         return y
 
@@ -321,14 +288,14 @@ class MVMOO(MVO):
 
         return y
 
-    def EIMoptimiserWrapper(self, Xcont, Xqual, constraints=False):
+    def EIMoptimiserWrapper(self, Xcont, Xqual, constraints=False, mode='euclidean'):
 
         X = np.concatenate((Xcont.reshape((1,-1)), Xqual.reshape((1,-1))), axis=1)
 
         if constraints is not False:
             return -self.CEIM_Hypervolume(X)
 
-        return -self.EIM_Euclidean(X).reshape(-1)
+        return -self.EIM(X,mode).reshape(-1)
 
     def AEIMoptimiserWrapper(self, Xcont, Xqual, constraints=False):
 
@@ -338,7 +305,7 @@ class MVMOO(MVO):
         
             
 
-    def EIMmixedoptimiser(self, constraints, algorithm='Random Local', values=None):
+    def EIMmixedoptimiser(self, constraints, algorithm='Random Local', values=None, mode='euclidean'):
         """
         Optimise EI search whole domain
         """
@@ -346,7 +313,7 @@ class MVMOO(MVO):
             Xsamples = self.sample_design(samples=10000, design='halton')
 
             if constraints is False:
-                fvals = self.EIM_Hypervolume(Xsamples)
+                fvals = self.EIM(Xsamples, mode=mode)
             else:
                 fvals = self.CEIM_Hypervolume(Xsamples)
 
@@ -360,9 +327,35 @@ class MVMOO(MVO):
             Xsamples = self.sample_design(samples=10000, design='halton')
 
             if constraints is False:
-                fvals = self.EIM_Euclidean(Xsamples)
+                fvals = self.EIM(Xsamples, mode=mode)
             else:
                 fvals = self.CEIM_Hypervolume(Xsamples)
+            if mode == 'all':
+                fmax = np.max(fvals,axis=0)
+                print(fvals.shape)
+                print(fmax.shape)
+                indmax = np.argmax(fvals,axis=0)
+                print(indmax)
+                xmax = Xsamples[indmax,:]
+                qual = xmax[:,-self.num_qual:].reshape(-1)
+
+                bnd = list(self.bounds[:,:self.num_quant].T)
+                bndlist = []
+
+                for element in bnd:
+                    bndlist.append(tuple(element))
+
+                modes = ['euclidean', 'hypervolume']
+                results = []
+                for i in range(2):
+                    results.append(stats.optimize.minimize(self.EIMoptimiserWrapper, xmax[i,:-self.num_qual].reshape(-1), args=(qual[i],constraints,modes[i]), bounds=bndlist,method='SLSQP'))
+
+                xmax = np.concatenate((results[0].x, qual[0]),axis=None)
+                xmax = np.vstack((xmax,np.concatenate((results[1].x, qual[1]),axis=None)))
+
+                fmax = np.array((results[0].fun,results[1].fun))
+
+                return fmax, xmax
 
             fmax = np.amax(fvals)
             indymax = np.argmax(fvals)
@@ -375,81 +368,16 @@ class MVMOO(MVO):
             for element in bnd:
                 bndlist.append(tuple(element))
 
-            result = stats.optimize.minimize(self.EIMoptimiserWrapper, xmax[:-self.num_qual].reshape(-1), args=(qual,constraints), bounds=bndlist,method='SLSQP')
+            result = stats.optimize.minimize(self.EIMoptimiserWrapper, xmax[:-self.num_qual].reshape(-1), args=(qual,constraints,mode), bounds=bndlist,method='SLSQP')
             if values is None:
                 
                 return result.fun, np.concatenate((result.x, qual),axis=None)
 
             return fmax, xmax, fvals, Xsamples
 
-        elif algorithm == 'SHGO':
-            if self.num_qual < 1:
-                bnd = list(self.bounds.T)
-                bndlist = []
-
-                for element in bnd:
-                    bndlist.append(tuple(element))
-            
-                if constraints is False:
-                    result = shgo(self.EIM_Hypervolume,bndlist, sampling_method='sobol', n=30, iters=2)
-                
-                else:
-                    result = shgo(self.CEIM_Hypervolume,bndlist, sampling_method='sobol', n=30, iters=2)
-                return result.x, result.fun
-            else:
-                sample = self.sample_design(samples=1, design='random')
-                contbnd = list(self.bounds[:,:self.num_quant].T)
-                contbndlist = []
-                qual = sample[:,-self.num_qual:]
-
-                for element in contbnd:
-                    contbndlist.append(tuple(element))
-                resXstore = []
-                resFstore = []
-                for i in range(np.shape(qual)[0]):
-                    result = shgo(self.EIMoptimiserWrapper, contbndlist, args=(qual[i,:],constraints), sampling_method='sobol', n=30, iters=2)
-                    resXstore.append(result.x)
-                    resFstore.append(result.fun)
-
-                # sort for each discrete combination and get best point
-                ind = resFstore.index(min(resFstore))  
-                xmax = np.concatenate((resXstore[ind],qual[ind,:]))
-                fval = min(resFstore)      
-                return fval, xmax
         else:
-            if self.num_qual < 1:
-                bnd = list(self.bounds.T)
-                bndlist = []
-
-                for element in bnd:
-                    bndlist.append(tuple(element))
-            
-                if constraints is False:
-                    result = shgo(self.EIM_Hypervolume,bndlist, sampling_method='simplicial', iters=3)
-                
-                else:
-                    result = shgo(self.CEIM_Hypervolume,bndlist, sampling_method='simplicial', iters=3)
-                return result.x, result.fun
-            else:
-                sample = self.sample_design(samples=1, design='random')
-                contbnd = list(self.bounds[:,:self.num_quant].T)
-                contbndlist = []
-                qual = sample[:,-self.num_qual:]
-
-                for element in contbnd:
-                    contbndlist.append(tuple(element))
-                resXstore = []
-                resFstore = []
-                for i in range(np.shape(qual)[0]):
-                    result = shgo(self.EIMoptimiserWrapper, contbndlist, args=(qual[i,:],constraints), sampling_method='simplicial', iters=3)
-                    resXstore.append(result.x)
-                    resFstore.append(result.fun)
-
-                # sort for each discrete combination and get best point
-                ind = resFstore.index(min(resFstore))  
-                xmax = np.concatenate((resXstore[ind],qual[ind,:]))
-                fval = min(resFstore)      
-                return fval, xmax        
+            raise NotImplementedError()
+             
 
     
     def AEIMmixedoptimiser(self, constraints, algorithm='Random', values=None):
@@ -578,7 +506,7 @@ class MVMOO(MVO):
 
         return      
 
-    def multinextcondition(self, X, Y, constraints=False, values=None, method='EIM'):
+    def multinextcondition(self, X, Y, constraints=False, values=None, method='EIM', mode='euclidean'):
         """
         Suggest the next condition for evaluation
         """
@@ -612,10 +540,14 @@ class MVMOO(MVO):
             if method == 'AEIM':
                 fmax, xmax = self.AEIMmixedoptimiser(constraints, algorithm='Random Local')
             else:
-                fmax, xmax = self.EIMmixedoptimiser(constraints, algorithm='Random Local')
+                fmax, xmax = self.EIMmixedoptimiser(constraints, algorithm='Random Local',mode=mode)
             
-            if values is None:
+            if values is None and mode != 'all':
                 return xmax.reshape(1,-1), fmax
+            elif values is None and mode == 'all':
+                if np.allclose(xmax[0,:],xmax[1,:], rtol=1e-3, atol=1e-5):
+                    return xmax[0,:].reshape(1,-1), fmax[0]             
+                return np.unique(xmax.round(6),axis=0), fmax
  
         self.models = self.generatemodels(X,Y)
         self.currentfront = self.paretofront(self.Yscaled)

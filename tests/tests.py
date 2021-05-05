@@ -136,12 +136,14 @@ Ystore = []
 for k in range(1):
     X = optimiser.sample_design(samples=5, design='lhc')
     Y = discretevlmop2(X)
-    for i in range(30):
+    i=0
+    while X.shape[0] < 30:
         start = time.time()
-        xmax, _ = optimiser.multinextcondition(X,Y, method='AEIM')
+        xmax, fval = optimiser.multinextcondition(X,Y, method='EIM',mode='euclidean')
         end = time.time()
+        print(fval)
         print("Time elapsed to get next condition: " + str(end - start) + " seconds.")
-        ysample = discretevlmop2(xmax.reshape((1,3)))
+        ysample = discretevlmop2(xmax.reshape((-1,3)))
         print(xmax)
         print(ysample)
         X = np.concatenate((X,xmax))
