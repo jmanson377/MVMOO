@@ -88,7 +88,7 @@ plt.scatter(Y[10:,0],Y[10:,1],label='Algorithm',s=30)
 plt.show()
 ```
 ## Citing MVMOO
-To cite the MVMOO algorithm please reference the [Journal of Global Optimization](https://link.springer.com/10.1007/s10898-021-01052-9) paper.
+To cite the MVMOO algorithm, please reference the [Journal of Global Optimization](https://link.springer.com/10.1007/s10898-021-01052-9) paper.
 ```
 @article{Manson2021,
 author = {Manson, Jamie A. and Chamberlain, Thomas W. and Bourne, Richard A.},
