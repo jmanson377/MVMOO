@@ -87,3 +87,17 @@ plt.scatter(Y[:10,0],Ysorted[:10,1],label='Initial',s=10)
 plt.scatter(Y[10:,0],Y[10:,1],label='Algorithm',s=30)
 plt.show()
 ```
+## Citing MVMOO
+```
+@article{Manson2021,
+author = {Manson, Jamie A. and Chamberlain, Thomas W. and Bourne, Richard A.},
+doi = {10.1007/s10898-021-01052-9},
+issn = {0925-5001},
+journal = {Journal of Global Optimization},
+month = {jul},
+pages = {},
+title = {{MVMOO: Mixed variable multi-objective optimisation}},
+url = {https://link.springer.com/10.1007/s10898-021-01052-9},
+year = {2021}
+}
+```
